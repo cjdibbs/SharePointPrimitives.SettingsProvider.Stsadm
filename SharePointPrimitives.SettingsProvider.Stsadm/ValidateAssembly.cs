@@ -34,12 +34,17 @@ using SharePointPrimitives.Stsadm;
 using System.Reflection;
 using System.Configuration;
 using Provider = SharePointPrimitives.SettingsProvider;
+using System.Xml.Linq;
+using System.Xml;
 
 namespace SharePointPrimitives.SettingsProvider.Stsadm {
     public class ValidateAssembly : BaseCommand {
 
         string name;
         string path;
+        bool premoteWarnings = false;
+        List<string> warnings = new List<string>();
+        List<string> errors = new List<string>();
 
         protected override string HelpDescription {
             get { return "Validates that the settings for the assembly are in the database"; }
@@ -61,6 +66,13 @@ namespace SharePointPrimitives.SettingsProvider.Stsadm {
                     Help = "Path of assembly to check",
                     OnCommand = s => path = s
                 };
+                yield return new CommandArgument() {
+                    Name = "warnings-as-errors",
+                    ArgumentRequired = false,
+                    Help = "turn off of the warnings into errors",
+                    OnCommand = _ => premoteWarnings = true
+                };
+
             }
         }
 
@@ -73,44 +85,90 @@ namespace SharePointPrimitives.SettingsProvider.Stsadm {
             Assembly assembly = null;
 
             if (!String.IsNullOrEmpty(name)) {
-                if (name.Contains(',')) {
-                    // assume that we have a strong name;
-                    try {
-                        assembly = Assembly.Load(name);
-                    } catch (Exception e) {
-                        Log.Error(e.Message, e);
-                        Out.WriteLine("could not load {0}", name);
-                        return -1;
-                    }
-                } else {
-                    // assume that we have a partal name
-                    try {
-                        assembly = Assembly.LoadWithPartialName(name);
-                    } catch (Exception e) {
-                        Log.Error(e.Message, e);
-                        Out.WriteLine("could not load {0}", name);
-                        return -1;
-                    }
+                try {
+                    assembly = Assembly.LoadWithPartialName(name); // I am aware it is depercated but it is soo useful
+                } catch (Exception e) {
+                    Log.Error(e.Message, e);
+                }
+            } else {
+                try {
+                    assembly = Assembly.LoadFile(path);
+                } catch (Exception e) {
+                    Log.Error(e.Message, e);
                 }
             }
+
+            if (assembly == null) {
+                Out.WriteLine("could not load {0}{1}", name,path);
+                return -1;
+            }
+
             //get the settings object
             Type ApplicationSettingsBaseT = typeof(ApplicationSettingsBase);
             Type settingsT = assembly.GetTypes().Where(t => t.BaseType == ApplicationSettingsBaseT).FirstOrDefault();
 
-            Log.InfoFormat("Found {0}", settingsT.FullName);
+
 
             if (settingsT == null) {
-                Out.WriteLine("{0} has no settings object passes by default");
+                Out.WriteLine("{0} has no settings object passes by default", assembly.FullName);
                 return 0;
             }
-            Type providerT = typeof(Provider);
-            var attr = settingsT.GetCustomAttributes<SettingsProviderAttribute>(true).FirstOrDefault();
 
-            if (attr == null || attr.ProviderTypeName != providerT.FullName) {
-                Out.WriteLine("Error: {0} is not using the settings provider");
+            Log.InfoFormat("Found {0}", settingsT.FullName);
+
+            Type providerT = typeof(Provider);
+            var attr = settingsT.GetCustomAttribute<SettingsProviderAttribute>(true);
+
+            if (attr == null || !attr.ProviderTypeName.StartsWith(providerT.FullName)) {
+                errors.Add(String.Format("{0} is not using the settings provider", assembly.FullName));
             }
 
+            //the name of the section is the full name of the class
+            string section = settingsT.FullName;
+
+            using (var database = new SettingsProviderDatabase()) {
+                Dictionary<string,string> applicationCache = database.GetApplcationSettingsFor(section);
+                Dictionary<string, string> connectionCache = database.GetNamedConnectionsFor(section);
+
+                IEnumerable<PropertyInfo> settings = 
+                    settingsT.GetProperties()
+                    .Where(p => p.HasCustomAttribute<ApplicationScopedSettingAttribute>(true));
+
+                foreach (PropertyInfo setting in settings) {
+                    SpecialSettingAttribute special = setting.GetCustomAttribute<SpecialSettingAttribute>(true);
+                    if (special == null) {
+                        //normal settings 
+                        if (!applicationCache.ContainsKey(setting.Name)) {
+                            warnings.Add(String.Format("{0} will be loading the default value of '{1}'", setting.Name, GetDefaultValue(setting)));
+                        }
+                    } else if (special.SpecialSetting == SpecialSetting.ConnectionString) {
+                        //connection string
+                        string settingName = section + "." + setting.Name;
+
+                        if (!connectionCache.ContainsKey(settingName))
+                            errors.Add(String.Format("{0} will be loading the default value of '{1}'", settingName, GetDefaultValue(setting)));
+
+                    }
+                }
+            }
+
+            var report = new XElement("report");
+            if (warnings.Any())
+                report.Add(warnings.Select(w => new XElement(premoteWarnings ? "error" : "warning", w)).ToArray());
+            if(errors.Any())
+                report.Add(errors.Select(e => new XElement("error", e)).ToArray());
+
+            report.WriteTo(new XmlTextWriter(Out));
             return 0;
+        }
+
+        private static string GetDefaultValue(PropertyInfo setting) {
+            string value = null;
+
+            DefaultSettingValueAttribute defaultValue = setting.GetCustomAttribute<DefaultSettingValueAttribute>(true);
+            if (defaultValue != null)
+                value = defaultValue.Value;
+            return value;
         }
     }
 }
