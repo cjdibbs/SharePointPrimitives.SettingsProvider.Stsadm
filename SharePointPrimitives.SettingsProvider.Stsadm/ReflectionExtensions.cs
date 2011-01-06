@@ -30,6 +30,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Reflection;
+using System.Configuration;
 
 namespace SharePointPrimitives.SettingsProvider.Stsadm {
     public static class ReflectionExtensions {
@@ -44,6 +45,20 @@ namespace SharePointPrimitives.SettingsProvider.Stsadm {
         public static bool HasCustomAttribute<AttributeT>(this ICustomAttributeProvider provider, bool inherit) {
             return provider.GetCustomAttributes(typeof(AttributeT), inherit).OfType<AttributeT>().Any();
 
+        }
+
+        public static string DefaultValue(this PropertyInfo info) {
+            string value = null;
+
+            DefaultSettingValueAttribute defaultValue = info.GetCustomAttribute<DefaultSettingValueAttribute>(true);
+            if (defaultValue != null)
+                value = defaultValue.Value;
+            return value;
+        }
+
+        public static bool IsConnectionString(this PropertyInfo setting) {
+            SpecialSettingAttribute special = setting.GetCustomAttribute<SpecialSettingAttribute>(true);
+            return special != null && special.SpecialSetting == SpecialSetting.ConnectionString;
         }
     }
 }

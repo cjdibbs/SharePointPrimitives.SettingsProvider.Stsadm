@@ -117,14 +117,14 @@ namespace SharePointPrimitives.SettingsProvider.Stsadm {
                     if (special == null) {
                         //normal settings 
                         if (!applicationCache.ContainsKey(setting.Name)) {
-                            warnings.Add(String.Format("{0} will be loading the default value of '{1}'", setting.Name, GetDefaultValue(setting)));
+                            warnings.Add(String.Format("{0} will be loading the default value of '{1}'", setting.Name, setting.DefaultValue()));
                         }
                     } else if (special.SpecialSetting == SpecialSetting.ConnectionString) {
                         //connection string
                         string settingName = section + "." + setting.Name;
 
                         if (!connectionCache.ContainsKey(settingName))
-                            errors.Add(String.Format("{0} will be loading the default value of '{1}'", settingName, GetDefaultValue(setting)));
+                            errors.Add(String.Format("{0} will be loading the default value of '{1}'", settingName, setting.DefaultValue()));
 
                     }
                 }
@@ -138,16 +138,6 @@ namespace SharePointPrimitives.SettingsProvider.Stsadm {
 
             report.WriteTo(new XmlTextWriter(Out));
             return 0;
-        }
-
-
-        private static string GetDefaultValue(PropertyInfo setting) {
-            string value = null;
-
-            DefaultSettingValueAttribute defaultValue = setting.GetCustomAttribute<DefaultSettingValueAttribute>(true);
-            if (defaultValue != null)
-                value = defaultValue.Value;
-            return value;
         }
     }
 }
