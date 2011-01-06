@@ -90,22 +90,16 @@ namespace SharePointPrimitives.SettingsProvider.Stsadm {
             }
 
             //get the settings object
-            Type ApplicationSettingsBaseT = typeof(ApplicationSettingsBase);
-            Type settingsT = assembly.GetTypes().Where(t => t.BaseType == ApplicationSettingsBaseT).FirstOrDefault();
-
-            if (settingsT == null) {
+            
+            if (!Tools.HasSettings(assembly)) {
                 Out.WriteLine("{0} has no settings object passes by default", assembly.FullName);
                 return 0;
             }
 
-            Log.InfoFormat("Found {0}", settingsT.FullName);
+            Type settingsT = Tools.GetSettings(assembly);
 
-            Type providerT = typeof(Provider);
-            var attr = settingsT.GetCustomAttribute<SettingsProviderAttribute>(true);
-
-            if (attr == null || !attr.ProviderTypeName.StartsWith(providerT.FullName)) {
+            if (settingsT == null)
                 errors.Add(String.Format("{0} is not using the settings provider", assembly.FullName));
-            }
 
             //the name of the section is the full name of the class
             string section = settingsT.FullName;
