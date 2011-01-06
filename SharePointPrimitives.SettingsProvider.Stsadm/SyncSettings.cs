@@ -65,17 +65,8 @@ namespace SharePointPrimitives.SettingsProvider.Stsadm {
             }
 
             Assembly assembly = Tools.LoadAssembly(name, path);
-            Type settingsT = Tools.GetSettings(assembly);
-
-            if (settingsT == null) {
-                Out.WriteLine("{0} does not use the custom settings provider nothing to sync", assembly.FullName);
-                return 0;
-            }
-
-            // build assembly settings
-            var settings = settingsT.GetProperties().Where(p => p.HasCustomAttribute<ApplicationScopedSettingAttribute>(true));
-            
-
+            SnapShot assemblySettings = SnapShot.BuildFrom(assembly);
+            SnapShot databaseSettings = SnapShot.GetFor(assembly);
 
             // get database settings
             // compare and report changes needed

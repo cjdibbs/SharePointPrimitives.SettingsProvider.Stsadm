@@ -2,10 +2,10 @@
 
 <commands>
   <command
-    name="settings-validateassembly"
+    name="settings-validate-assembly"
     class="SharePointPrimitives.SettingsProvider.Stsadm.ValidateAssembly, SharePointPrimitives.SettingsProvider.Stsadm, Version=1.0.0.0, Culture=neutral, PublicKeyToken=54a532c4dd306648"/>
   <command
-    name="settings-validateassembly"
+    name="settings-sync-with-assembly"
     class="SharePointPrimitives.SettingsProvider.Stsadm.SyncSettings, SharePointPrimitives.SettingsProvider.Stsadm, Version=1.0.0.0, Culture=neutral, PublicKeyToken=54a532c4dd306648"/>
 
 </commands>

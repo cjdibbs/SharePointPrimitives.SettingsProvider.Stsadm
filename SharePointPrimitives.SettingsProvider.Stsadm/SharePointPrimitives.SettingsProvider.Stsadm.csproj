@@ -62,6 +62,7 @@
     <Compile Include="ReflectionExtensions.cs" />
   </ItemGroup>
   <ItemGroup>
+    <None Include="App.config" />
     <None Include="install.ps1" />
     <None Include="SharePointPrimitives.snk" />
   </ItemGroup>

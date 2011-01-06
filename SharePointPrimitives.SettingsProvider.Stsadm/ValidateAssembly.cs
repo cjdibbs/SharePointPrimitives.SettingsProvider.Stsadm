@@ -36,18 +36,26 @@ using System.Configuration;
 using Provider = SharePointPrimitives.SettingsProvider;
 using System.Xml.Linq;
 using System.Xml;
+using SharePointPrimitives.SettingsProvider.Reflection;
 
 namespace SharePointPrimitives.SettingsProvider.Stsadm {
+    public static class ListExtensions {
+        public static void Add(this List<string> list, string format, params object[] items) {
+            list.Add(string.Format(format, items));
+        }
+    }
+
     public class ValidateAssembly : BaseCommand {
 
         string name;
         string path;
-        bool premoteWarnings = false;
-        List<string> warnings = new List<string>();
-        List<string> errors = new List<string>();
+        bool showPatch = false;
 
         protected override string HelpDescription {
-            get { return "Validates that the settings for the assembly are in the database"; }
+            get { return 
+@"Validates that the settings for the assembly are in the database
+you can use `stsadm -o settings-sync-with-assembly` to push defaults into the database";
+            }
         }
 
         protected override IEnumerable<CommandArgument> CommandArguments {
@@ -67,10 +75,10 @@ namespace SharePointPrimitives.SettingsProvider.Stsadm {
                     OnCommand = s => path = s
                 };
                 yield return new CommandArgument() {
-                    Name = "warnings-as-errors",
+                    Name = "show-patch",
                     ArgumentRequired = false,
-                    Help = "turn off of the warnings into errors",
-                    OnCommand = _ => premoteWarnings = true
+                    Help = "show the patch to bring the database back in sync if needed",
+                    OnCommand = _ => showPatch = true
                 };
 
             }
@@ -89,55 +97,23 @@ namespace SharePointPrimitives.SettingsProvider.Stsadm {
                 return -1;
             }
 
-            //get the settings object
-            
-            if (!Tools.HasSettings(assembly)) {
+            if (!assembly.HasSettings()) {
                 Out.WriteLine("{0} has no settings object passes by default", assembly.FullName);
                 return 0;
             }
 
-            Type settingsT = Tools.GetSettings(assembly);
+            SnapShot assemblySettings = SnapShot.BuildFrom(assembly);
+            SnapShot databaseSettings = SnapShot.GetFor(assembly);
 
-            if (settingsT == null)
-                errors.Add(String.Format("{0} is not using the settings provider", assembly.FullName));
+            Patch patch = new Patch(databaseSettings, assemblySettings);
 
-            //the name of the section is the full name of the class
-            string section = settingsT.FullName;
+            if (patch.IsEmpty)
+                return 0;
 
-            using (var database = new SettingsProviderDatabase()) {
-                Dictionary<string,string> applicationCache = database.GetApplcationSettingsFor(section);
-                Dictionary<string, string> connectionCache = database.GetNamedConnectionsFor(section);
-
-                IEnumerable<PropertyInfo> settings = 
-                    settingsT.GetProperties()
-                    .Where(p => p.HasCustomAttribute<ApplicationScopedSettingAttribute>(true));
-
-                foreach (PropertyInfo setting in settings) {
-                    SpecialSettingAttribute special = setting.GetCustomAttribute<SpecialSettingAttribute>(true);
-                    if (special == null) {
-                        //normal settings 
-                        if (!applicationCache.ContainsKey(setting.Name)) {
-                            warnings.Add(String.Format("{0} will be loading the default value of '{1}'", setting.Name, setting.DefaultValue()));
-                        }
-                    } else if (special.SpecialSetting == SpecialSetting.ConnectionString) {
-                        //connection string
-                        string settingName = section + "." + setting.Name;
-
-                        if (!connectionCache.ContainsKey(settingName))
-                            errors.Add(String.Format("{0} will be loading the default value of '{1}'", settingName, setting.DefaultValue()));
-
-                    }
-                }
-            }
-
-            var report = new XElement("report");
-            if (warnings.Any())
-                report.Add(warnings.Select(w => new XElement(premoteWarnings ? "error" : "warning", w)).ToArray());
-            if(errors.Any())
-                report.Add(errors.Select(e => new XElement("error", e)).ToArray());
-
-            report.WriteTo(new XmlTextWriter(Out));
-            return 0;
+            Out.WriteLine("The assembly and the database are out of sync run 'stsadm -o settings-sync-with-assembly' to sync");
+            if(showPatch)
+                Out.WriteLine(patch.ToXml().ToString(SaveOptions.None));
+            return 1;
         }
     }
 }
