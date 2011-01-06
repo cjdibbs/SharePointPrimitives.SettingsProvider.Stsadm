@@ -107,8 +107,10 @@ you can use `stsadm -o settings-sync-with-assembly` to push defaults into the da
 
             Patch patch = new Patch(databaseSettings, assemblySettings);
 
-            if (patch.IsEmpty)
+            if (patch.IsEmpty) {
+                Out.WriteLine("All of the settings in this assembly are in the database");
                 return 0;
+            }
 
             Out.WriteLine("The assembly and the database are out of sync run 'stsadm -o settings-sync-with-assembly' to sync");
             if(showPatch)
