@@ -8,7 +8,9 @@ namespace SharePointPrimitives.SettingsProvider.Stsadm {
         public static Assembly LoadAssembly(string name, string path) {
             try {
                 if (!String.IsNullOrEmpty(name)) {
-                    return Assembly.LoadWithPartialName(name); // I am aware it is depercated but it is soo useful
+#pragma warning disable 0618  // I am aware it is depercated but it is soo useful
+                    return Assembly.LoadWithPartialName(name);
+#pragma warning restore 0618
                 } else {
                     return Assembly.LoadFile(path);
                 }
