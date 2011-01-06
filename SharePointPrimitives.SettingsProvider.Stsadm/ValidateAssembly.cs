@@ -82,21 +82,7 @@ namespace SharePointPrimitives.SettingsProvider.Stsadm {
                 return -1;
             }
 
-            Assembly assembly = null;
-
-            if (!String.IsNullOrEmpty(name)) {
-                try {
-                    assembly = Assembly.LoadWithPartialName(name); // I am aware it is depercated but it is soo useful
-                } catch (Exception e) {
-                    Log.Error(e.Message, e);
-                }
-            } else {
-                try {
-                    assembly = Assembly.LoadFile(path);
-                } catch (Exception e) {
-                    Log.Error(e.Message, e);
-                }
-            }
+            Assembly assembly = Tools.LoadAssembly(name, path);
 
             if (assembly == null) {
                 Out.WriteLine("could not load {0}{1}", name,path);
@@ -106,8 +92,6 @@ namespace SharePointPrimitives.SettingsProvider.Stsadm {
             //get the settings object
             Type ApplicationSettingsBaseT = typeof(ApplicationSettingsBase);
             Type settingsT = assembly.GetTypes().Where(t => t.BaseType == ApplicationSettingsBaseT).FirstOrDefault();
-
-
 
             if (settingsT == null) {
                 Out.WriteLine("{0} has no settings object passes by default", assembly.FullName);
@@ -161,6 +145,7 @@ namespace SharePointPrimitives.SettingsProvider.Stsadm {
             report.WriteTo(new XmlTextWriter(Out));
             return 0;
         }
+
 
         private static string GetDefaultValue(PropertyInfo setting) {
             string value = null;
