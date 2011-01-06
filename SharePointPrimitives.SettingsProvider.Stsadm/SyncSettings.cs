@@ -38,6 +38,7 @@ namespace SharePointPrimitives.SettingsProvider.Stsadm {
 
         string name;
         string path;
+        bool noPrompt;
 
         protected override IEnumerable<CommandArgument> CommandArguments {
             get {
@@ -55,6 +56,12 @@ namespace SharePointPrimitives.SettingsProvider.Stsadm {
                     Help = "Path of assembly to check",
                     OnCommand = s => path = s
                 };
+                yield return new CommandArgument() {
+                    Name = "no-prompt",
+                    ArgumentRequired = false,
+                    CommandRequired = false,
+                    OnCommand = _ => noPrompt = true
+                };
             }
         }
 
@@ -67,12 +74,20 @@ namespace SharePointPrimitives.SettingsProvider.Stsadm {
             Assembly assembly = Tools.LoadAssembly(name, path);
             SnapShot assemblySettings = SnapShot.BuildFrom(assembly);
             SnapShot databaseSettings = SnapShot.GetFor(assembly);
+            Patch patch = new Patch(databaseSettings, assemblySettings);
 
-            // get database settings
-            // compare and report changes needed
-            // prompt if we want to sync
-            // sync
+            if (patch.IsEmpty)
+                Out.WriteLine("database is already in sync");
 
+            if (!noPrompt) {
+                Console.WriteLine(patch.ToString());
+                Console.Write("apply the patch? (y)es > ");
+                string responce = Console.ReadLine();
+                if (!responce.ToLower().StartsWith("y"))
+                    return 0;
+            }
+
+            patch.Apply(new Patch.ApplyOptions());
             return 0;
         }
     }
