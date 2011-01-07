@@ -55,6 +55,7 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Restore.cs" />
     <Compile Include="SyncSettings.cs" />
     <Compile Include="Tools.cs" />
     <Compile Include="ValidateAssembly.cs" />
