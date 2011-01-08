@@ -39,12 +39,6 @@ using System.Xml;
 using SharePointPrimitives.SettingsProvider.Reflection;
 
 namespace SharePointPrimitives.SettingsProvider.Stsadm {
-    public static class ListExtensions {
-        public static void Add(this List<string> list, string format, params object[] items) {
-            list.Add(string.Format(format, items));
-        }
-    }
-
     public class ValidateAssembly : BaseCommand {
 
         string name;
