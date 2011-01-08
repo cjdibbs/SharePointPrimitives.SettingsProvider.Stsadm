@@ -55,6 +55,8 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="ApplyPatch.cs" />
+    <Compile Include="GetPatch.cs" />
     <Compile Include="Restore.cs" />
     <Compile Include="SyncSettings.cs" />
     <Compile Include="Tools.cs" />

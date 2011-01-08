@@ -10,5 +10,11 @@
   <command
       name="settings-restore-from-audit-log"
       class="SharePointPrimitives.SettingsProvider.Stsadm.Restore, SharePointPrimitives.SettingsProvider.Stsadm, Version=1.0.0.0, Culture=neutral, PublicKeyToken=54a532c4dd306648"/>
+  <command
+      name="settings-apply-patch"
+      class="SharePointPrimitives.SettingsProvider.Stsadm.ApplyPatch, SharePointPrimitives.SettingsProvider.Stsadm, Version=1.0.0.0, Culture=neutral, PublicKeyToken=54a532c4dd306648"/>
+  <command
+      name="settings-get-patch"
+      class="SharePointPrimitives.SettingsProvider.Stsadm.GetPatch, SharePointPrimitives.SettingsProvider.Stsadm, Version=1.0.0.0, Culture=neutral, PublicKeyToken=54a532c4dd306648"/>
 
 </commands>
